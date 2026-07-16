@@ -1,7 +1,16 @@
-import { createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
+import { isLoggedIn } from "@/lib/session"
 
-export const Route = createFileRoute("/")({ component: App })
+export const Route = createFileRoute("/")({
+  component: App,
+  beforeLoad: async () => {
+    const session = await isLoggedIn()
+    if (!session.ssiToken) {
+      throw redirect({ to: "/login" })
+    }
+  },
+})
 
 function App() {
   return (
