@@ -3,5 +3,6 @@ app:
   version: latest
   imagePullPolicy: Always
   host:
+  storage: 1Gi
   env:
     SESSION_SECRET:

@@ -1,9 +1,4 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: interface */
-import { queryOptions } from "@tanstack/react-query"
-import { loadOrFetchCachedZip } from "./cache"
-
-const SITES_URL =
-  "https://api.divessi.com/app/APP_CACHE_SITES.zip?ssiapp=0815_ADR&lang=en&version=ADR_4.1.268-ssi&context=s"
 
 export interface Root {
   created: string
@@ -42,12 +37,4 @@ export interface Current {
   light_current?: number
   strong_current?: number
   ripping_current?: number
-}
-
-export function ssiSitesOptions() {
-  return queryOptions({
-    queryKey: ["ssi", "sites"],
-    queryFn: () =>
-      loadOrFetchCachedZip<Root>(SITES_URL, "ssi-sites.zip", "ssi-sites.json"),
-  })
 }

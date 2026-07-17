@@ -7,7 +7,13 @@ import { defineConfig } from "vite"
 
 const config = defineConfig({
   resolve: { tsconfigPaths: true },
-  plugins: [devtools(), tailwindcss(), tanstackStart(), nitro(), viteReact()],
+  plugins: [
+    devtools(),
+    tailwindcss(),
+    tanstackStart(),
+    nitro({ plugins: ["./src/server/plugins/ssi-data.ts"] }),
+    viteReact(),
+  ],
 })
 
 export default config

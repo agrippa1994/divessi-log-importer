@@ -8,3 +8,4 @@ dist-ssr
 .vscode
 *.local
 .env*
+data

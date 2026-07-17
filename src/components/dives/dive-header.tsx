@@ -1,7 +1,9 @@
+import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
-import { LogOutIcon, PlusIcon, UserRoundIcon } from "lucide-react"
+import { LogOutIcon, PlusIcon } from "lucide-react"
 import { useState } from "react"
 import { ImportDiveDialog } from "@/components/dives/import-dive-dialog"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -9,15 +11,26 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { ssiProfileOptions } from "@/lib/integrations/ssi/profile"
 import { logout } from "@/lib/session"
 
 export function DiveHeader() {
   const navigate = useNavigate()
   const [importOpen, setImportOpen] = useState(false)
+  const { data: profile } = useQuery(ssiProfileOptions())
+
+  const fullName = [profile?.user_forename, profile?.user_lastname]
+    .filter(Boolean)
+    .join(" ")
+  const initials =
+    [profile?.user_forename, profile?.user_lastname]
+      .filter((part): part is string => Boolean(part))
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || undefined
 
   async function handleLogout() {
     await logout()
-    navigate({ to: "/login" })
+    await navigate({ to: "/login" })
   }
 
   return (
@@ -29,8 +42,15 @@ export function DiveHeader() {
           <span className="hidden sm:inline">Import dive</span>
         </Button>
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="ghost" size="icon" />}>
-            <UserRoundIcon />
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon" className="rounded-full" />
+            }
+          >
+            <Avatar>
+              <AvatarImage src={profile?.user_image} alt={fullName} />
+              <AvatarFallback>{initials}</AvatarFallback>
+            </Avatar>
             <span className="sr-only">Account menu</span>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">

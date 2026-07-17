@@ -44,10 +44,30 @@ spec:
           env:
             - name: SESSION_SECRET
               value: {{ $.Values.app.env.SESSION_SECRET | quote }}
+            - name: DATA_DIR
+              value: /data
           ports:
             - containerPort: 3000
               name: app
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: app-data
       restartPolicy: Always
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: app-data
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: {{ $.Values.app.storage }}
 ---
 apiVersion: v1
 kind: Service
