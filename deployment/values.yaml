@@ -1,0 +1,7 @@
+app:
+  image: agrippa1994/divessi-log-importer
+  version: latest
+  imagePullPolicy: Always
+  host:
+  env:
+    SESSION_SECRET:
