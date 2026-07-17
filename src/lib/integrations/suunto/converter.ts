@@ -1,52 +1,66 @@
-import { type CreateDive, DivePhaseFlag, type DiveSample } from '../ssi/create-dive';
-import { barToPsi, celsiusToFahrenheit, kelvinToCelsius, metersToFeet } from './dive';
-import type { SuuntoDiveLog } from './schema';
+import {
+  type CreateDive,
+  DivePhaseFlag,
+  type DiveSample,
+} from "../ssi/create-dive"
+import {
+  barToPsi,
+  celsiusToFahrenheit,
+  kelvinToCelsius,
+  metersToFeet,
+} from "./dive"
+import type { SuuntoDiveLog } from "./schema"
 
 // --- Main Converter ---
 
 function createDiveSamples(data: SuuntoDiveLog): DiveSample[] {
-  const diveSamples: DiveSample[] = [];
+  const diveSamples: DiveSample[] = []
 
-  let index = 1;
-  let sampleId = -1;
+  let index = 1
+  let sampleId = -1
   for (const suuntoSample of data.DeviceLog.Samples) {
-    sampleId++;
+    sampleId++
 
     if (suuntoSample.Depth === undefined) {
-      continue;
+      continue
     }
 
     const tempOffsetId = data.DeviceLog.Samples.reduce(
       (previous, current, idx) => {
         if (current.Temperature === undefined) {
-          return previous;
+          return previous
         }
 
-        const offset = Math.abs(sampleId - idx);
+        const offset = Math.abs(sampleId - idx)
         if (previous === null) {
-          return sampleId - idx;
+          return sampleId - idx
         }
 
         if (offset < previous) {
-          return sampleId - idx;
+          return sampleId - idx
         }
 
-        return previous;
+        return previous
       },
-      null as null | number,
-    );
+      null as null | number
+    )
 
-    let temp = 0;
+    let temp = 0
     if (tempOffsetId !== null) {
-      const entry = data.DeviceLog.Samples[sampleId - tempOffsetId];
+      const entry = data.DeviceLog.Samples[sampleId - tempOffsetId]
       if (entry.Temperature !== undefined) {
-        temp = kelvinToCelsius(entry.Temperature);
+        temp = kelvinToCelsius(entry.Temperature)
       }
     }
 
-    const offset = new Date(suuntoSample.TimeISO8601).getTime() - new Date(data.DeviceLog.Header.DateTime).getTime();
-    const rawCylPressure = suuntoSample.Cylinders?.[0]?.Pressure;
-    const samplePressureBar = rawCylPressure != null ? Math.round((rawCylPressure / 100000) * 100) / 100 : undefined;
+    const offset =
+      new Date(suuntoSample.TimeISO8601).getTime() -
+      new Date(data.DeviceLog.Header.DateTime).getTime()
+    const rawCylPressure = suuntoSample.Cylinders?.[0]?.Pressure
+    const samplePressureBar =
+      rawCylPressure != null
+        ? Math.round((rawCylPressure / 100000) * 100) / 100
+        : undefined
 
     diveSamples.push({
       a: 0,
@@ -62,91 +76,95 @@ function createDiveSamples(data: SuuntoDiveLog): DiveSample[] {
       t: offset,
       te: temp,
       ...(samplePressureBar !== undefined && { pressure: samplePressureBar }),
-    });
+    })
 
-    index++;
+    index++
   }
-  return diveSamples;
+  return diveSamples
 }
 
 export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
-  const { Header, Samples } = data.DeviceLog;
+  const { Header, Samples } = data.DeviceLog
 
   // Find dive start/end indices
-  const diveStartIdx = Samples.findIndex((s) => s.DiveEvents?.DiveStatus === true);
+  const diveStartIdx = Samples.findIndex(
+    (s) => s.DiveEvents?.DiveStatus === true
+  )
 
   const diveStartTime =
-    diveStartIdx >= 0 ? new Date(Samples[diveStartIdx].TimeISO8601).getTime() : new Date(Header.DateTime).getTime();
-  const diveEndTime = diveStartTime + Header.DiveTime * 1000;
+    diveStartIdx >= 0
+      ? new Date(Samples[diveStartIdx].TimeISO8601).getTime()
+      : new Date(Header.DateTime).getTime()
+  const diveEndTime = diveStartTime + Header.DiveTime * 1000
 
   // Extract time-series data within dive phase
-  const depthData: number[] = [];
-  const tempData: number[] = [];
-  const tempValues: number[] = [];
+  const depthData: number[] = []
+  const tempData: number[] = []
+  const tempValues: number[] = []
 
   for (const sample of Samples) {
-    const sampleTime = new Date(sample.TimeISO8601).getTime();
-    if (sampleTime < diveStartTime || sampleTime > diveEndTime) continue;
+    const sampleTime = new Date(sample.TimeISO8601).getTime()
+    if (sampleTime < diveStartTime || sampleTime > diveEndTime) continue
 
-    const _secondsOffset = (sampleTime - diveStartTime) / 1000;
+    const _secondsOffset = (sampleTime - diveStartTime) / 1000
 
     if (sample.Depth !== undefined) {
-      depthData.push(sample.Depth);
+      depthData.push(sample.Depth)
     }
 
     if (sample.Temperature !== undefined) {
-      const celsius = kelvinToCelsius(sample.Temperature);
-      tempValues.push(celsius);
-      tempData.push(celsius);
+      const celsius = kelvinToCelsius(sample.Temperature)
+      tempValues.push(celsius)
+      tempData.push(celsius)
     }
   }
 
   // Water temp min/max from dive samples
-  const waterTempMinC = tempValues.length > 0 ? Math.min(...tempValues) : null;
-  const waterTempMaxC = tempValues.length > 0 ? Math.max(...tempValues) : null;
+  const waterTempMinC = tempValues.length > 0 ? Math.min(...tempValues) : null
+  const waterTempMaxC = tempValues.length > 0 ? Math.max(...tempValues) : null
 
   // GPS from first DiveRouteOrigin sample
-  const gpsSample = Samples.find((s) => 'DiveRouteOrigin' in s);
-  const latitude = gpsSample?.DiveRouteOrigin?.Latitude ?? null;
-  const longitude = gpsSample?.DiveRouteOrigin?.Longitude ?? null;
+  const gpsSample = Samples.find((s) => "DiveRouteOrigin" in s)
+  const latitude = gpsSample?.DiveRouteOrigin?.Latitude ?? null
+  const longitude = gpsSample?.DiveRouteOrigin?.Longitude ?? null
 
   // Cylinder pressure (first/last non-null)
-  let pressureStartBar: number | null = null;
-  let pressureEndBar: number | null = null;
+  let pressureStartBar: number | null = null
+  let pressureEndBar: number | null = null
   for (const sample of Samples) {
-    const sampleTime = new Date(sample.TimeISO8601).getTime();
-    if (sampleTime < diveStartTime || sampleTime > diveEndTime) continue;
+    const sampleTime = new Date(sample.TimeISO8601).getTime()
+    if (sampleTime < diveStartTime || sampleTime > diveEndTime) continue
 
-    if (!sample.Cylinders) continue;
+    if (!sample.Cylinders) continue
 
     for (const cyl of sample.Cylinders) {
       if (cyl.Pressure != null) {
         if (pressureStartBar === null) {
-          pressureStartBar = cyl.Pressure / 100000;
+          pressureStartBar = cyl.Pressure / 100000
         }
-        pressureEndBar = cyl.Pressure / 100000;
+        pressureEndBar = cyl.Pressure / 100000
       }
     }
   }
 
   // DateTime parsing
-  const dt = new Date(Header.DateTime);
-  const year = dt.getFullYear();
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  const hours = String(dt.getHours()).padStart(2, '0');
-  const minutes = String(dt.getMinutes()).padStart(2, '0');
-  const seconds = String(dt.getSeconds()).padStart(2, '0');
-  const millis = String(dt.getMilliseconds()).padStart(3, '0');
+  const dt = new Date(Header.DateTime)
+  const year = dt.getFullYear()
+  const month = String(dt.getMonth() + 1).padStart(2, "0")
+  const day = String(dt.getDate()).padStart(2, "0")
+  const hours = String(dt.getHours()).padStart(2, "0")
+  const minutes = String(dt.getMinutes()).padStart(2, "0")
+  const seconds = String(dt.getSeconds()).padStart(2, "0")
+  const millis = String(dt.getMilliseconds()).padStart(3, "0")
 
-  const dateStr = `${year}-${month}-${day}`;
-  const entryTime = `${hours}:${minutes}`;
-  const dateTimeStr = `${dateStr}+${hours}:${minutes}:${seconds}.${millis}`;
+  const dateStr = `${year}-${month}-${day}`
+  const entryTime = `${hours}:${minutes}`
+  const dateTimeStr = `${dateStr}+${hours}:${minutes}:${seconds}.${millis}`
 
-  const deviceName = `Suunto ${Header.Device.Name}`;
-  const diveTimeMinutes = Math.round((Header.DiveTime / 60) * 10) / 10;
+  const deviceName = `Suunto ${Header.Device.Name}`
+  const diveTimeMinutes = Math.round((Header.DiveTime / 60) * 10) / 10
 
-  const samples = createDiveSamples(data);
+  const samples = createDiveSamples(data)
 
   return {
     // --- Bookkeeping (overridden in import.tsx) ---
@@ -164,26 +182,38 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     // --- Core dive data ---
     odin_user_log_datetime: dateTimeStr,
     odin_user_log_depth_m: Header.Depth.Max,
-    odin_user_log_depth_ft: Math.round(metersToFeet(Header.Depth.Max) * 100) / 100,
+    odin_user_log_depth_ft:
+      Math.round(metersToFeet(Header.Depth.Max) * 100) / 100,
     odin_user_log_avg_depth_m: Header.DepthAverage,
-    odin_user_log_avg_depth_ft: Math.round(metersToFeet(Header.DepthAverage) * 100) / 100,
+    odin_user_log_avg_depth_ft:
+      Math.round(metersToFeet(Header.DepthAverage) * 100) / 100,
     odin_user_log_divetime: diveTimeMinutes,
     odin_user_log_dive_type: 0,
     odin_user_log_rating: null,
     odin_user_log_airtemp_c: null,
     odin_user_log_airtemp_f: null,
-    odin_user_log_watertemp_c: waterTempMinC !== null ? Math.round(waterTempMinC * 100) / 100 : null,
+    odin_user_log_watertemp_c:
+      waterTempMinC !== null ? Math.round(waterTempMinC * 100) / 100 : null,
     odin_user_log_watertemp_f:
-      waterTempMinC !== null ? Math.round(celsiusToFahrenheit(waterTempMinC) * 100) / 100 : null,
-    odin_user_log_watertemp_max_c: waterTempMaxC !== null ? Math.round(waterTempMaxC * 100) / 100 : null,
+      waterTempMinC !== null
+        ? Math.round(celsiusToFahrenheit(waterTempMinC) * 100) / 100
+        : null,
+    odin_user_log_watertemp_max_c:
+      waterTempMaxC !== null ? Math.round(waterTempMaxC * 100) / 100 : null,
     odin_user_log_watertemp_max_f:
-      waterTempMaxC !== null ? Math.round(celsiusToFahrenheit(waterTempMaxC) * 100) / 100 : null,
+      waterTempMaxC !== null
+        ? Math.round(celsiusToFahrenheit(waterTempMaxC) * 100) / 100
+        : null,
 
     // --- Pressure ---
     odin_user_log_pressure_start_bar: pressureStartBar ?? null,
-    odin_user_log_pressure_start_psi: pressureStartBar ? Math.round(barToPsi(pressureStartBar)) : null,
+    odin_user_log_pressure_start_psi: pressureStartBar
+      ? Math.round(barToPsi(pressureStartBar))
+      : null,
     odin_user_log_pressure_end_bar: pressureEndBar ?? null,
-    odin_user_log_pressure_end_psi: pressureEndBar ? Math.round(barToPsi(pressureEndBar)) : null,
+    odin_user_log_pressure_end_psi: pressureEndBar
+      ? Math.round(barToPsi(pressureEndBar))
+      : null,
 
     // --- Site, buddies, gear ---
     odin_user_log_dive_sites_id: null,
@@ -355,7 +385,7 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     odin_user_log_divecomputer_serial_nr: Header.Device.SerialNumber,
     odin_user_log_divecomputer_ble_id: null,
     odin_user_log_divecomputer_firmware: Header.Device.Info.SW,
-    odin_user_log_divecomputer_manufacturer: 'Suunto',
+    odin_user_log_divecomputer_manufacturer: "Suunto",
     odin_user_log_divecomputer_ref: `Suunto ${Header.Device.Name}_${Header.Device.SerialNumber}`,
     odin_user_log_divecomputer_dive_ref: Header.DateTime,
     odin_user_log_divecomputer_imported: false,
@@ -372,7 +402,9 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     odin_user_log_gfnowDataset: null, //JSON.stringify(samples.map((s) => s.gn)),
     odin_user_log_gfSurfDataset: JSON.stringify(samples.map((s) => s.gs)),
     odin_user_log_deepestDecoDataset: null,
-    odin_user_log_tankPressureDataset: samples.some((s) => s.pressure !== undefined)
+    odin_user_log_tankPressureDataset: samples.some(
+      (s) => s.pressure !== undefined
+    )
       ? JSON.stringify(samples.map((s) => s.pressure ?? null))
       : null,
     odin_user_log_freeDiveSessionCharts: null,
@@ -383,7 +415,7 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     // --- Decompression ---
     odin_user_log_si_before: data.DeviceLog.Windows.reduce(
       (previous, acc) => acc.Window?.DiveRecoveryTime ?? previous,
-      null as null | number,
+      null as null | number
     ),
     odin_user_log_gf_set: null,
     odin_user_log_gf_set_1: null,
@@ -535,5 +567,5 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     odin_user_log_dive_on_own_risk: 0,
     odin_user_log_dive_on_own_risk_os_app: null,
     odin_user_log_housing_local_dive_media: null,
-  } satisfies CreateDive;
+  } satisfies CreateDive
 }

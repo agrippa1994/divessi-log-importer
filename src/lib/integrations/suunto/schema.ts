@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod"
 
 // Permissive schema: only validate fields the converter actually reads.
 // Suunto export files contain hundreds of fields per sample and the device firmware
@@ -22,7 +22,7 @@ const sampleSchema = z.object({
     .array(
       z.object({
         Pressure: z.number().nullable().optional(),
-      }),
+      })
     )
     .optional(),
   DiveEvents: z
@@ -36,7 +36,7 @@ const sampleSchema = z.object({
       Longitude: z.number(),
     })
     .optional(),
-});
+})
 
 const windowEntrySchema = z.object({
   TimeISO8601: z.string(),
@@ -45,7 +45,7 @@ const windowEntrySchema = z.object({
       DiveRecoveryTime: z.number().nullable().optional(),
     })
     .optional(),
-});
+})
 
 export const suuntoDiveLogSchema = z.object({
   DeviceLog: z.object({
@@ -67,6 +67,6 @@ export const suuntoDiveLogSchema = z.object({
     Samples: z.array(sampleSchema),
     Windows: z.array(windowEntrySchema),
   }),
-});
+})
 
-export type SuuntoDiveLog = z.infer<typeof suuntoDiveLogSchema>;
+export type SuuntoDiveLog = z.infer<typeof suuntoDiveLogSchema>

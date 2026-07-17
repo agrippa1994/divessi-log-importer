@@ -1,11 +1,25 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: API
 import { mutationOptions } from "@tanstack/react-query"
+import { createServerFn } from "@tanstack/react-start"
+import z from "zod"
+import { useAppSession } from "@/lib/session.server"
 import { ssiPost } from "./api"
+
+export const saveSsiDive = createServerFn({ method: "POST" })
+  .validator(z.object({ dive: z.custom<CreateDive>() }))
+  .handler(async (ctx) => {
+    const session = await useAppSession()
+    await ssiPost(
+      { what: "save_divelog", token: session.data.ssiToken! },
+      ctx.data.dive
+    )
+    return true
+  })
 
 export function ssiCreateDiveOptions() {
   return mutationOptions({
     mutationFn: async (variables: { dive: CreateDive }) => {
-      return await ssiPost({ what: "save_divelog" }, variables.dive)
+      return await saveSsiDive({ data: variables })
     },
     onSuccess: async (_data, _variables, _onMutateResult, context) => {
       await context.client.invalidateQueries({ queryKey: ["ssi", "dives"] })
