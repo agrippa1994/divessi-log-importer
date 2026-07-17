@@ -1,4 +1,3 @@
-import type { QueryFunctionContext } from "@tanstack/react-query"
 import axios from "axios"
 
 declare module "axios" {
@@ -13,6 +12,12 @@ declare module "axios" {
 export const rpcEndpoint = "/app/a21.php"
 export const ssiClient = axios.create({
   baseURL: "https://api.divessi.com",
+  params: {
+    ssiapp: "0815_ADR",
+    lang: "en",
+    version: "ADR_4.1.268-ssi",
+    context: "s",
+  },
 })
 
 export const ssiTokenSecureStorageKey = "ssiToken"
@@ -33,7 +38,6 @@ export class APIError extends Error {
 }
 
 export async function ssiGet<T>(
-  ctx: QueryFunctionContext,
   params: Record<string, string>,
   options?: {
     endpoint?: string

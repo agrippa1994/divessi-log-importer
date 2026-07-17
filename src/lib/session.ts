@@ -1,28 +1,11 @@
 import { createServerFn } from "@tanstack/react-start"
-import { useSession } from "@tanstack/react-start/server"
 import z from "zod"
-import { env } from "./env"
-import { rpcEndpoint, ssiClient, ssiPost } from "./integrations/ssi/api"
+import { rpcEndpoint, ssiClient } from "./integrations/ssi/api"
 import type {
   Authenticated,
   AuthenticationError,
 } from "./integrations/ssi/login"
-
-type SessionData = {
-  ssiToken: string
-}
-
-export function useAppSession() {
-  return useSession<SessionData>({
-    name: "app-session",
-    password: env.SESSION_SECRET ?? "secret",
-    cookie: {
-      secure: env.NODE_ENV === "production",
-      sameSite: "lax",
-      httpOnly: true,
-    },
-  })
-}
+import { useAppSession } from "./session.server"
 
 export const isLoggedIn = createServerFn({ method: "GET" }).handler(
   async () => {
@@ -39,21 +22,28 @@ export const login = createServerFn({ method: "POST" })
     })
   )
   .handler(async (ctx) => {
-    const result = await ssiClient.get<Authenticated | AuthenticationError>(
-      rpcEndpoint,
-      {
-        params: {
-          what: "authenticate",
-          l: ctx.data.email,
-          p: ctx.data.password,
-        },
-      }
-    )
+    console.log("Perform login for", ctx.data.email)
+    try {
+      const result = await ssiClient.get<Authenticated | AuthenticationError>(
+        rpcEndpoint,
+        {
+          params: {
+            what: "authenticate",
+            l: ctx.data.email,
+            p: ctx.data.password,
+          },
+        }
+      )
 
-    const session = await useAppSession()
-    if (result.data.authenticated) {
-      await session.update({ ssiToken: result.data.token })
-      return true
+      console.log("Received", result)
+
+      const session = await useAppSession()
+      if (result.data.authenticated) {
+        await session.update({ ssiToken: result.data.token })
+        return true
+      }
+    } catch (e) {
+      console.log("Error", e)
     }
 
     return false

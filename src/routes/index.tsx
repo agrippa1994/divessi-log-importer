@@ -1,5 +1,7 @@
+import { useQuery } from "@tanstack/react-query"
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
+import { ssiDivesOptions } from "@/lib/integrations/ssi/dives"
 import { isLoggedIn } from "@/lib/session"
 
 export const Route = createFileRoute("/")({
@@ -13,6 +15,8 @@ export const Route = createFileRoute("/")({
 })
 
 function App() {
+  const dives = useQuery(ssiDivesOptions())
+
   return (
     <div className="flex min-h-svh p-6">
       <div className="flex max-w-md min-w-0 flex-col gap-4 text-sm leading-loose">
