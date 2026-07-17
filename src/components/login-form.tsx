@@ -1,4 +1,6 @@
 import { useForm } from "@tanstack/react-form"
+import { useNavigate } from "@tanstack/react-router"
+import { useState } from "react"
 import z from "zod"
 import { Button } from "@/components/ui/button"
 import {
@@ -10,7 +12,6 @@ import {
 } from "@/components/ui/card"
 import {
   Field,
-  FieldDescription,
   FieldError,
   FieldGroup,
   FieldLabel,
@@ -28,14 +29,23 @@ export function LoginForm({
   className,
   ...props
 }: React.ComponentProps<"div">) {
+  const navigate = useNavigate()
+  const [loginError, setLoginError] = useState(false)
+
   const form = useForm({
     defaultValues: {
       email: "",
       password: "",
     },
     validators: { onChange: formSchema },
-    onSubmit: async (x) => {
-      alert(await login({ data: x.value }))
+    onSubmit: async (ctx) => {
+      const success = await login({ data: ctx.value })
+      if (success) {
+        setLoginError(false)
+        navigate({ to: "/" })
+      } else {
+        setLoginError(true)
+      }
     },
   })
 
@@ -109,6 +119,9 @@ export function LoginForm({
                   )
                 }}
               />
+              {loginError && (
+                <FieldError>Invalid email or password.</FieldError>
+              )}
               <Field>
                 <Button type="submit">Login</Button>
               </Field>

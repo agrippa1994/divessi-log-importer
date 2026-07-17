@@ -14,6 +14,12 @@ export const isLoggedIn = createServerFn({ method: "GET" }).handler(
   }
 )
 
+export const logout = createServerFn({ method: "POST" }).handler(async () => {
+  const session = await useAppSession()
+  await session.clear()
+  return true
+})
+
 export const login = createServerFn({ method: "POST" })
   .validator(
     z.object({
