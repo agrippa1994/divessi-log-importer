@@ -17,3 +17,14 @@ export function useAppSession() {
     },
   })
 }
+
+export async function getSSIToken() {
+  // biome-ignore lint/correctness/useHookAtTopLevel: TanStack API
+  const session = await useAppSession()
+
+  if (!session.data.ssiToken) {
+    throw new Error("Unauthorized")
+  }
+
+  return session.data.ssiToken
+}

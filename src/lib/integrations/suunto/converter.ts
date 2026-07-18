@@ -1,15 +1,28 @@
 import {
-  type CreateDive,
-  DivePhaseFlag,
-  type DiveSample,
-} from "../ssi/create-dive"
-import {
   barToPsi,
   celsiusToFahrenheit,
   kelvinToCelsius,
   metersToFeet,
-} from "./dive"
+} from "../../units"
+import {
+  type CreateDive,
+  DivePhaseFlag,
+  type DiveSample,
+} from "../ssi/create-dive"
 import type { SuuntoDiveLog } from "./schema"
+
+// --- GPS ---
+
+/** First DiveRouteOrigin sample, if the dive log recorded one. */
+export function extractSuuntoGps(
+  data: SuuntoDiveLog
+): { latitude: number; longitude: number } | null {
+  const gpsSample = data.DeviceLog.Samples.find((s) => "DiveRouteOrigin" in s)
+  const origin = gpsSample?.DiveRouteOrigin
+  return origin
+    ? { latitude: origin.Latitude, longitude: origin.Longitude }
+    : null
+}
 
 // --- Main Converter ---
 
@@ -124,9 +137,9 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
   const waterTempMaxC = tempValues.length > 0 ? Math.max(...tempValues) : null
 
   // GPS from first DiveRouteOrigin sample
-  const gpsSample = Samples.find((s) => "DiveRouteOrigin" in s)
-  const latitude = gpsSample?.DiveRouteOrigin?.Latitude ?? null
-  const longitude = gpsSample?.DiveRouteOrigin?.Longitude ?? null
+  const gps = extractSuuntoGps(data)
+  const latitude = gps?.latitude ?? null
+  const longitude = gps?.longitude ?? null
 
   // Cylinder pressure (first/last non-null)
   let pressureStartBar: number | null = null

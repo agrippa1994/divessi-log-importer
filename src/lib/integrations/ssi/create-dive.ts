@@ -2,15 +2,14 @@
 import { mutationOptions } from "@tanstack/react-query"
 import { createServerFn } from "@tanstack/react-start"
 import z from "zod"
-import { useAppSession } from "@/lib/session.server"
+import { getSSIToken } from "@/lib/session.server"
 import { ssiPost } from "./api"
 
 export const saveSsiDive = createServerFn({ method: "POST" })
   .validator(z.object({ dive: z.custom<CreateDive>() }))
   .handler(async (ctx) => {
-    const session = await useAppSession()
     await ssiPost(
-      { what: "save_divelog", token: session.data.ssiToken! },
+      { what: "save_divelog", token: await getSSIToken() },
       ctx.data.dive
     )
     return true

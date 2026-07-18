@@ -29,6 +29,8 @@ export const login = createServerFn({ method: "POST" })
   )
   .handler(async (ctx) => {
     console.log("Perform login for", ctx.data.email)
+    const session = await useAppSession()
+
     try {
       const result = await ssiClient.get<Authenticated | AuthenticationError>(
         rpcEndpoint,
@@ -41,9 +43,6 @@ export const login = createServerFn({ method: "POST" })
         }
       )
 
-      console.log("Received", result)
-
-      const session = await useAppSession()
       if (result.data.authenticated) {
         await session.update({ ssiToken: result.data.token })
         return true

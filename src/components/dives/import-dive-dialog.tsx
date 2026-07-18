@@ -1,8 +1,8 @@
-import { useForm } from "@tanstack/react-form"
+import { useForm, useStore } from "@tanstack/react-form"
 import { useDebouncedValue } from "@tanstack/react-pacer"
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { CircleAlertIcon, FileIcon, MapPinIcon, PlusIcon } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import z from "zod"
 import { Alert, AlertDescription, AlertTitle } from "@/components/reui/alert"
 import {
@@ -29,8 +29,14 @@ import type { CreateDive } from "@/lib/integrations/ssi/create-dive"
 import { ssiCreateDiveOptions } from "@/lib/integrations/ssi/create-dive"
 import { ssiDivesOptions } from "@/lib/integrations/ssi/dives"
 import type { SiteSearchResult } from "@/lib/integrations/ssi/site-search"
-import { ssiSiteSearchOptions } from "@/lib/integrations/ssi/site-search"
-import { convertSuuntoToSSI } from "@/lib/integrations/suunto/converter"
+import {
+  ssiNearestSiteOptions,
+  ssiSiteSearchOptions,
+} from "@/lib/integrations/ssi/site-search"
+import {
+  convertSuuntoToSSI,
+  extractSuuntoGps,
+} from "@/lib/integrations/suunto/converter"
 import { suuntoDiveLogSchema } from "@/lib/integrations/suunto/schema"
 
 const schema = z.object({
@@ -89,6 +95,20 @@ export function ImportDiveDialog({
     },
   })
 
+  const uploadedDive = useStore(form.store, (s) => s.values.dive)
+  const gps = uploadedDive ? extractSuuntoGps(uploadedDive.contents) : null
+  const nearestSite = useQuery(
+    ssiNearestSiteOptions(gps?.latitude ?? null, gps?.longitude ?? null)
+  )
+
+  useEffect(() => {
+    const site = nearestSite.data
+    if (site && !form.getFieldValue("site")) {
+      form.setFieldValue("site", site)
+      setSiteQuery(site.odin_dive_sites_name)
+    }
+  }, [nearestSite.data, form])
+
   const [, fileActions] = useFileUpload({
     accept: "application/json",
     multiple: false,
@@ -144,84 +164,6 @@ export function ImportDiveDialog({
           }}
         >
           <FieldGroup>
-            <form.Field name="site">
-              {(field) => {
-                const selected = field.state.value
-
-                return (
-                  <Field data-invalid={field.state.meta.errors.length > 0}>
-                    <FieldLabel>
-                      <MapPinIcon data-icon="inline-start" />
-                      Dive site
-                    </FieldLabel>
-
-                    {selected ? (
-                      <div className="flex items-center justify-between gap-2 rounded-2xl border px-3 py-2">
-                        <span className="truncate font-medium">
-                          {selected.odin_dive_sites_name}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            field.handleChange(
-                              null as unknown as SiteSearchResult
-                            )
-                            setSiteQuery("")
-                          }}
-                        >
-                          Change
-                        </Button>
-                      </div>
-                    ) : (
-                      <Autocomplete
-                        items={siteResults.data ?? []}
-                        value={siteQuery}
-                        onValueChange={setSiteQuery}
-                        itemToStringValue={(item: unknown) =>
-                          (item as SiteSearchResult).odin_dive_sites_name
-                        }
-                        filter={null}
-                      >
-                        <AutocompleteInput placeholder="Search dive sites…" />
-                        {siteQuery.trim().length >= 2 && (
-                          <AutocompleteContent>
-                            <AutocompleteStatus>
-                              {siteResults.isFetching
-                                ? "Searching…"
-                                : (siteResults.data?.length ?? 0) === 0
-                                  ? `No sites found for "${siteQuery}"`
-                                  : ""}
-                            </AutocompleteStatus>
-                            <AutocompleteList>
-                              {(item: SiteSearchResult) => (
-                                <AutocompleteItem
-                                  key={item.odin_dive_sites_id}
-                                  value={item}
-                                  onClick={() => {
-                                    field.handleChange(item)
-                                    setSiteQuery(item.odin_dive_sites_name)
-                                  }}
-                                >
-                                  <div className="flex flex-col">
-                                    <span>{item.odin_dive_sites_name}</span>
-                                    <span className="text-xs text-muted-foreground">
-                                      {item.odin_dive_sites_meta_country}
-                                    </span>
-                                  </div>
-                                </AutocompleteItem>
-                              )}
-                            </AutocompleteList>
-                          </AutocompleteContent>
-                        )}
-                      </Autocomplete>
-                    )}
-                  </Field>
-                )
-              }}
-            </form.Field>
-
             <form.Field name="dive">
               {(field) => {
                 const value = field.state.value
@@ -312,6 +254,84 @@ export function ImportDiveDialog({
                           </div>
                         </CardContent>
                       </Card>
+                    )}
+                  </Field>
+                )
+              }}
+            </form.Field>
+
+            <form.Field name="site">
+              {(field) => {
+                const selected = field.state.value
+
+                return (
+                  <Field data-invalid={field.state.meta.errors.length > 0}>
+                    <FieldLabel>
+                      <MapPinIcon data-icon="inline-start" />
+                      Dive site
+                    </FieldLabel>
+
+                    {selected ? (
+                      <div className="flex items-center justify-between gap-2 rounded-2xl border px-3 py-2">
+                        <span className="truncate font-medium">
+                          {selected.odin_dive_sites_name}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            field.handleChange(
+                              null as unknown as SiteSearchResult
+                            )
+                            setSiteQuery("")
+                          }}
+                        >
+                          Change
+                        </Button>
+                      </div>
+                    ) : (
+                      <Autocomplete
+                        items={siteResults.data ?? []}
+                        value={siteQuery}
+                        onValueChange={setSiteQuery}
+                        itemToStringValue={(item: unknown) =>
+                          (item as SiteSearchResult).odin_dive_sites_name
+                        }
+                        filter={null}
+                      >
+                        <AutocompleteInput placeholder="Search dive sites…" />
+                        {siteQuery.trim().length >= 2 && (
+                          <AutocompleteContent>
+                            <AutocompleteStatus>
+                              {siteResults.isFetching
+                                ? "Searching…"
+                                : (siteResults.data?.length ?? 0) === 0
+                                  ? `No sites found for "${siteQuery}"`
+                                  : ""}
+                            </AutocompleteStatus>
+                            <AutocompleteList>
+                              {(item: SiteSearchResult) => (
+                                <AutocompleteItem
+                                  key={item.odin_dive_sites_id}
+                                  value={item}
+                                  onClick={() => {
+                                    field.handleChange(item)
+                                    setSiteQuery(item.odin_dive_sites_name)
+                                  }}
+                                >
+                                  <div className="flex flex-col">
+                                    <span>{item.odin_dive_sites_name}</span>
+                                    <span className="text-xs text-muted-foreground">
+                                      {item.odin_dive_sites_meta_country}
+                                    </span>
+                                  </div>
+                                </AutocompleteItem>
+                              )}
+                            </AutocompleteList>
+                          </AutocompleteContent>
+                        )}
+                      </Autocomplete>
                     )}
                   </Field>
                 )
