@@ -1,8 +1,24 @@
 /** biome-ignore-all lint/suspicious/noExplicitAny: no interface data */
 import { queryOptions } from "@tanstack/react-query"
 import { createServerFn } from "@tanstack/react-start"
-import { useAppSession } from "@/lib/session.server"
+import { getSSIToken } from "@/lib/session.server"
 import { ssiGet } from "./api"
+
+export const getSSIProfile = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return ssiGet<Profile>({
+      what: "get_user_data",
+      token: await getSSIToken(),
+    })
+  }
+)
+
+export function ssiProfileOptions() {
+  return queryOptions({
+    queryKey: ["ssi", "profile"],
+    queryFn: (ctx) => getSSIProfile({ signal: ctx.signal }),
+  })
+}
 
 export interface Profile {
   authenticated_message: string
@@ -94,21 +110,4 @@ export interface PrivacySettings {
   sizingtable: number[]
   hide_certs_in_diver_verification: number[]
   hide_recent_certs_online: number[]
-}
-
-export const getSsiProfile = createServerFn({ method: "GET" }).handler(
-  async () => {
-    const session = await useAppSession()
-    return ssiGet<Profile>({
-      what: "get_user_data",
-      token: session.data.ssiToken!,
-    })
-  }
-)
-
-export function ssiProfileOptions() {
-  return queryOptions({
-    queryKey: ["ssi", "profile"],
-    queryFn: (ctx) => getSsiProfile({ signal: ctx.signal }),
-  })
 }

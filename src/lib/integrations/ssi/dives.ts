@@ -1,24 +1,22 @@
 // biome-ignore-all lint/suspicious/noExplicitAny: API
 import { queryOptions } from "@tanstack/react-query"
 import { createServerFn } from "@tanstack/react-start"
-import { useAppSession } from "@/lib/session.server"
+import { getSSIToken } from "@/lib/session.server"
 import { ssiGet } from "./api"
 
-export const getSsiDives = createServerFn({ method: "GET" }).handler(
-  async (ctx) => {
-    const session = await useAppSession()
-    const x = await ssiGet<Divelog>({
+export const getSSIDives = createServerFn({ method: "GET" }).handler(
+  async () => {
+    return await ssiGet<Divelog>({
       what: "get_divelog",
-      token: session.data.ssiToken!,
+      token: await getSSIToken(),
     })
-    return x
   }
 )
 
 export function ssiDivesOptions() {
   return queryOptions({
     queryKey: ["ssi", "dives"],
-    queryFn: (ctx) => getSsiDives({ signal: ctx.signal }),
+    queryFn: (ctx) => getSSIDives({ signal: ctx.signal }),
   })
 }
 
@@ -115,7 +113,7 @@ export interface LogbookDetail {
   odin_user_log_avg_depth_ft: number | null
   odin_user_log_amv_l: number
   odin_user_log_amv_psi: number
-  odin_user_log_gear_details: OdinUserLogGearDetails
+  odin_user_log_gear_details: string
   odin_user_log_animal_ids: any[]
   odin_user_log_verified: boolean
   odin_user_log_confirmed: boolean
@@ -123,12 +121,12 @@ export interface LogbookDetail {
   odin_user_log_divecenter_confirmed_id: number
   odin_user_log_divecenter_confirmed_name: string
   odin_user_log_leader_confirmed_id: number
-  odin_user_log_leader_confirmed_name: OdinUserLogLeaderConfirmedName
+  odin_user_log_leader_confirmed_name: string
   odin_user_log_user_confirmed_id: number
   odin_user_log_user_confirmed_name: string
   odin_user_log_buddy_confirmed_buddyid: number
   odin_user_log_buddy_confirmed_name: string
-  odin_user_log_transferDate: OdinUserLogTransferDate
+  odin_user_log_transferDate: string
   odin_user_log_diveComputer: string
   odin_user_log_diveComputerData: string
   odin_user_log_depthDataset: string
@@ -136,7 +134,7 @@ export interface LogbookDetail {
   odin_user_log_si_before: number | null
   odin_user_log_watertemp_max_c: number | null
   odin_user_log_watertemp_max_f: number | null
-  odin_user_log_gf_set: OdinUserLogGfSet
+  odin_user_log_gf_set: string
   odin_user_log_gf_set_1: number
   odin_user_log_gf_set_2: number
   odin_user_log_gf_end: number
@@ -152,7 +150,7 @@ export interface LogbookDetail {
   odin_user_log_alarmDataset: string
   odin_user_log_freeDiveSessionCharts: string
   odin_user_log_divecomputer_dive_ref: string
-  odin_user_log_divecomputer_ref: OdinUserLogDivecomputerRef
+  odin_user_log_divecomputer_ref: string
   odin_user_log_alarm_fast_ascent: number
   odin_user_log_alarm_deco_stop: number
   odin_user_log_alarm_deco_violation: number
@@ -435,73 +433,12 @@ export interface LogbookDetail {
   odin_user_log_gear: any[]
   debug_get_dives_for_master_id_for_app_2022: number
   odin_user_log_divecomputer_id: number | null
-  odin_user_log_divecomputer_serial_nr: OdinUserLogDivecomputerSerialNr
-  odin_user_log_divecomputer_firmware: OdinUserLogDivecomputerFirmware
-  odin_user_log_divecomputer_ble_id: OdinUserLogDivecomputerBleID
-  odin_user_log_divecomputer_name: OdinUserLogDivecomputerName
-  odin_user_log_divecomputer_manufacturer: OdinUserLogDivecomputerManufacturer
+  odin_user_log_divecomputer_serial_nr: string
+  odin_user_log_divecomputer_firmware: string
+  odin_user_log_divecomputer_ble_id: string
+  odin_user_log_divecomputer_name: string
+  odin_user_log_divecomputer_manufacturer: string
   odin_user_log_diveSamples?: string
-}
-
-export enum OdinUserLogDivecomputerBleID {
-  Empty = "",
-  The02C8E4Bc8C80C256683AEfc4C4D24756 = "02C8E4BC-8C80-C256-683A-EFC4C4D24756",
-}
-
-export enum OdinUserLogDivecomputerFirmware {
-  Empty = "",
-  The010404 = "01.04.04",
-  The010501 = "01.05.01",
-}
-
-export enum OdinUserLogDivecomputerManufacturer {
-  Empty = "",
-  Mares = "Mares",
-}
-
-export enum OdinUserLogDivecomputerName {
-  Empty = "",
-  MaresPuck4 = "Mares Puck4",
-  Puck4 = "Puck4",
-}
-
-export enum OdinUserLogDivecomputerRef {
-  Empty = "",
-  MaresPuck42417004981 = "Mares Puck4_2417004981",
-  Puck4 = "Puck4",
-}
-
-export enum OdinUserLogDivecomputerSerialNr {
-  Empty = "",
-  The2417004981 = "2417004981",
-}
-
-export enum OdinUserLogGearDetails {
-  Empty = "",
-  The5Mm = "5mm",
-  The7Mm = "7mm",
-}
-
-export enum OdinUserLogGfSet {
-  Empty = "",
-  The7171 = "71 / 71",
-  The7373 = "73 / 73",
-  The7575 = "75 / 75",
-  The7777 = "77 / 77",
-  The8585 = "85 / 85",
-}
-
-export enum OdinUserLogLeaderConfirmedName {
-  DominikBeyer125066 = "Dominik Beyer #125066",
-  Empty = "",
-  HannaMuir109160 = "Hanna Muir #109160",
-  ManfredHoeller116108 = "Manfred Hoeller #116108",
-  RobinTrieb70054 = "Robin Trieb #70054",
-  TinaSackl116106 = "Tina Sackl #116106",
-}
-
-export enum OdinUserLogTransferDate {
-  The00000000 = "0000-00-00",
 }
 
 export enum OdinUserLogVarSpecialdiveIDEnum {

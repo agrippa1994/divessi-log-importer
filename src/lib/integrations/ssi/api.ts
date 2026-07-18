@@ -44,11 +44,6 @@ export async function ssiGet<T>(
     skipToken?: boolean
   }
 ): Promise<T> {
-  if (!options?.skipToken) {
-    // const loggedIn = await ctx.client.ensureQueryData(ssiLoggedIn());
-    // if (!loggedIn) throw new Error('Not logged in');
-  }
-
   const { data } = await ssiClient.get<APIErrorData | T>(
     options?.endpoint ?? rpcEndpoint,
     {
@@ -73,7 +68,6 @@ export async function ssiPost<T>(
 ): Promise<T> {
   const encoded = `json_data=${encodeURIComponent(JSON.stringify(body))}`
 
-  console.log("INPUT", encoded)
   const { data } = await ssiClient.post<APIErrorData | T>(
     rpcEndpoint,
     encoded,

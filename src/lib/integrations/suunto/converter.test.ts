@@ -1,13 +1,13 @@
 import { readFile } from "node:fs/promises"
 import { join } from "node:path"
 import { describe, expect, it, test } from "vitest"
-import { convertSuuntoToSSI } from "./converter"
 import {
   barToPsi,
   celsiusToFahrenheit,
   kelvinToCelsius,
   metersToFeet,
-} from "./dive"
+} from "../../units"
+import { convertSuuntoToSSI } from "./converter"
 
 describe("helpers", () => {
   test("kelvinToCelsius", () => {
