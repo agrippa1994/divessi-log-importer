@@ -1,8 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { useNavigate } from "@tanstack/react-router"
 import { LogOutIcon, PlusIcon } from "lucide-react"
-import { useState } from "react"
-import { ImportDiveDialog } from "@/components/dives/import-dive-dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
@@ -16,7 +14,6 @@ import { logout } from "@/lib/session"
 
 export function DiveHeader() {
   const navigate = useNavigate()
-  const [importOpen, setImportOpen] = useState(false)
   const { data: profile } = useQuery(ssiProfileOptions())
 
   const fullName = [profile?.user_forename, profile?.user_lastname]
@@ -37,7 +34,7 @@ export function DiveHeader() {
     <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b bg-background/80 px-4 py-3 backdrop-blur-sm">
       <h1 className="font-heading text-base font-medium">Dive Log</h1>
       <div className="flex items-center gap-2">
-        <Button size="sm" onClick={() => setImportOpen(true)}>
+        <Button size="sm" onClick={() => navigate({ to: "/import" })}>
           <PlusIcon data-icon="inline-start" />
           <span className="hidden sm:inline">Import dive</span>
         </Button>
@@ -61,7 +58,6 @@ export function DiveHeader() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <ImportDiveDialog open={importOpen} onOpenChange={setImportOpen} />
     </header>
   )
 }
