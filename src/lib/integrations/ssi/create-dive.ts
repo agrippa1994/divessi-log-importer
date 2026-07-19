@@ -343,7 +343,7 @@ export interface CreateDive {
   odin_user_log_apple_watch: number
   odin_user_log_apple_watch_log_id: null
   odin_user_log_apple_watch_id: null
-  odin_user_log_pressureDataset: null
+  odin_user_log_pressureDataset: string | null
   odin_user_log_heartRateMin: null
   odin_user_log_heartRateMax: null
   odin_user_log_heartRateAvg: null

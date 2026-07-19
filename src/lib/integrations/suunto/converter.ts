@@ -179,6 +179,12 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
 
   const samples = createDiveSamples(data)
 
+  // Per-sample tank pressure series (bar). Only emit when at least one sample
+  // carries cylinder pressure; otherwise leave the datasets null.
+  const tankPressureDataset = samples.some((s) => s.pressure !== undefined)
+    ? JSON.stringify(samples.map((s) => s.pressure ?? null))
+    : null
+
   return {
     // --- Bookkeeping (overridden in import.tsx) ---
     odin_user_log_id: null,
@@ -415,13 +421,9 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     odin_user_log_gfnowDataset: null, //JSON.stringify(samples.map((s) => s.gn)),
     odin_user_log_gfSurfDataset: JSON.stringify(samples.map((s) => s.gs)),
     odin_user_log_deepestDecoDataset: null,
-    odin_user_log_tankPressureDataset: samples.some(
-      (s) => s.pressure !== undefined
-    )
-      ? JSON.stringify(samples.map((s) => s.pressure ?? null))
-      : null,
+    odin_user_log_tankPressureDataset: tankPressureDataset,
     odin_user_log_freeDiveSessionCharts: null,
-    odin_user_log_pressureDataset: null,
+    odin_user_log_pressureDataset: tankPressureDataset,
     odin_user_log_locationDataset: null,
     odin_user_log_diveSamples: JSON.stringify(samples),
 
