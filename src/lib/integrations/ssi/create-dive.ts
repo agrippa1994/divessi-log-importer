@@ -3,16 +3,50 @@ import { mutationOptions } from "@tanstack/react-query"
 import { createServerFn } from "@tanstack/react-start"
 import z from "zod"
 import { getSSIToken } from "@/lib/session.server"
-import { ssiPost } from "./api"
+import { ssiGet, ssiPost } from "./api"
+import type { Divelog } from "./dives"
+
+// SSI returns "YYYY-MM-DD HH:MM", the payload uses "YYYY-MM-DD+HH:MM:SS.mmm"
+function startMinute(datetime: string) {
+  return datetime.replace(/[+T]/, " ").slice(0, 16)
+}
+
+async function findStoredDive(token: string, dive: CreateDive) {
+  const divelog = await ssiGet<Divelog>({ what: "get_divelog", token })
+  const start = startMinute(dive.odin_user_log_datetime)
+  return divelog.logbook_details.filter(
+    (log) =>
+      Number(log.odin_user_log_deleted) === 0 &&
+      startMinute(log.odin_user_log_datetime) === start
+  )
+}
 
 export const saveSsiDive = createServerFn({ method: "POST" })
   .validator(z.object({ dive: z.custom<CreateDive>() }))
   .handler(async (ctx) => {
-    await ssiPost(
-      { what: "save_divelog", token: await getSSIToken() },
-      ctx.data.dive
-    )
-    return true
+    const token = await getSSIToken()
+    const { dive } = ctx.data
+
+    // Don't store the same dive twice (e.g. on a retried import)
+    if ((await findStoredDive(token, dive)).length > 0) {
+      return { skipped: true }
+    }
+
+    const response = await ssiPost({ what: "save_divelog", token }, dive)
+
+    // The server reports success even when it drops the dive, so read the logbook back
+    const stored = await findStoredDive(token, dive)
+    if (stored.length === 0) {
+      console.error("save_divelog did not store dive", response)
+      throw new Error(`Dive #${dive.odin_user_log_nr} was not stored by SSI`)
+    }
+    if (stored.length > 1) {
+      console.warn(
+        `save_divelog stored dive #${dive.odin_user_log_nr} ${stored.length} times`,
+        response
+      )
+    }
+    return { skipped: false }
   })
 
 export function ssiCreateDiveOptions() {

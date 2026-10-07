@@ -1,5 +1,5 @@
 import { useForm } from "@tanstack/react-form"
-import { useMutation, useQuery } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
 import { ArrowLeftIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
@@ -69,35 +69,53 @@ function ImportPage() {
   const navigate = useNavigate()
   const [fileError, setFileError] = useState<string | null>(null)
 
-  const dives = useQuery(ssiDivesOptions())
+  const queryClient = useQueryClient()
   const createDive = useMutation(ssiCreateDiveOptions())
 
   const form = useForm({
     validators: { onChange: schema },
     defaultValues: { dives: [] as DiveEntry[] },
     onSubmit: async ({ value }) => {
-      const baseNr =
-        (dives.data?.logbook_details.at(-1)?.odin_user_log_nr ?? 0) + 1
+      let imported = 0
+      let skipped = 0
 
       try {
+        // Load the logbook fresh so log numbers never come from stale data
+        const divelog = await queryClient.fetchQuery(ssiDivesOptions())
+        const baseNr =
+          Math.max(
+            0,
+            ...divelog.logbook_details.map((log) => log.odin_user_log_nr)
+          ) + 1
+
         // Dives are already sorted ascending, so log numbers stay in order.
-        for (const [index, entry] of value.dives.entries()) {
+        for (const entry of value.dives) {
           const dive: CreateDive = {
             ...convertSuuntoToSSI(entry.contents),
-            odin_user_log_nr: baseNr + index,
+            odin_user_log_nr: baseNr + imported,
             odin_user_log_id: null,
             odin_user_log_dive_sites_id: entry.site.odin_dive_sites_id,
           }
 
-          await createDive.mutateAsync({ dive })
+          const result = await createDive.mutateAsync({ dive })
+          if (result.skipped) skipped++
+          else imported++
         }
       } catch {
-        toast.error("Could not import the dives. Please try again.")
+        toast.error(
+          imported > 0
+            ? `Imported ${imported} dives, then the import failed. Please try again.`
+            : "Could not import the dives. Please try again."
+        )
         return
       }
 
-      const count = value.dives.length
-      toast.success(count > 1 ? `Imported ${count} dives` : "Imported 1 dive")
+      toast.success(
+        imported === 1 ? "Imported 1 dive" : `Imported ${imported} dives`,
+        skipped > 0
+          ? { description: `Skipped ${skipped} already in your logbook` }
+          : undefined
+      )
       await navigate({ to: "/" })
     },
   })

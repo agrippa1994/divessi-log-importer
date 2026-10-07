@@ -17,6 +17,8 @@ export function ssiDivesOptions() {
   return queryOptions({
     queryKey: ["ssi", "dives"],
     queryFn: (ctx) => getSSIDives({ signal: ctx.signal }),
+    // Never show a cached logbook; always load it fresh from SSI
+    gcTime: 0,
   })
 }
 

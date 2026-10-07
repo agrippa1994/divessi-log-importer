@@ -12,6 +12,9 @@ declare module "axios" {
 export const rpcEndpoint = "/app/a21.php"
 export const ssiClient = axios.create({
   baseURL: "https://api.divessi.com",
+  // SSI only stores save_divelog requests sent with the MySSI app's (Dart) User-Agent;
+  // other clients get a success stub and the dive is silently dropped.
+  headers: { "User-Agent": "Dart/3.12 (dart:io)" },
   params: {
     ssiapp: "0815_ADR",
     lang: "en",
