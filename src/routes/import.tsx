@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router"
+import type { DiveLog } from "divessi-client"
 import { ArrowLeftIcon, Trash2Icon } from "lucide-react"
 import { useState } from "react"
 import { toast } from "sonner"
@@ -11,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { FieldGroup } from "@/components/ui/field"
 import { useFileUpload } from "@/hooks/use-file-upload"
-import type { CreateDive } from "@/lib/integrations/ssi/create-dive"
 import { ssiCreateDiveOptions } from "@/lib/integrations/ssi/create-dive"
 import { ssiDivesOptions } from "@/lib/integrations/ssi/dives"
 import {
@@ -90,7 +90,7 @@ function ImportPage() {
 
         // Dives are already sorted ascending, so log numbers stay in order.
         for (const entry of value.dives) {
-          const dive: CreateDive = {
+          const dive: DiveLog = {
             ...convertSuuntoToSSI(entry.contents),
             odin_user_log_nr: baseNr + imported,
             odin_user_log_id: null,

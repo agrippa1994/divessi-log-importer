@@ -1,10 +1,6 @@
 import { createServerFn } from "@tanstack/react-start"
 import z from "zod"
-import { rpcEndpoint, ssiClient } from "./integrations/ssi/api"
-import type {
-  Authenticated,
-  AuthenticationError,
-} from "./integrations/ssi/login"
+import { createSsiClient } from "./integrations/ssi/api"
 import { useAppSession } from "./session.server"
 
 export const isLoggedIn = createServerFn({ method: "GET" }).handler(
@@ -32,18 +28,12 @@ export const login = createServerFn({ method: "POST" })
     const session = await useAppSession()
 
     try {
-      const result = await ssiClient.get<Authenticated | AuthenticationError>(
-        rpcEndpoint,
-        {
-          params: {
-            what: "authenticate",
-            l: ctx.data.email,
-            p: ctx.data.password,
-          },
-        }
-      )
+      const result = await createSsiClient().login({
+        l: ctx.data.email,
+        p: ctx.data.password,
+      })
 
-      if (result.data.authenticated) {
+      if (result.data.authenticated && result.data.token) {
         await session.update({ ssiToken: result.data.token })
         return true
       }

@@ -1,87 +1,21 @@
-import axios from "axios"
+import { createClient, type JsonValue } from "divessi-client"
 
-declare module "axios" {
-  interface InternalAxiosRequestConfig {
-    skipToken?: boolean
-  }
-  interface AxiosRequestConfig {
-    skipToken?: boolean
-  }
+// A client owns its token, so each server request gets an isolated instance.
+export function createSsiClient(token?: string) {
+  return createClient({ token, metadata: { lang: "en" } })
 }
 
-export const rpcEndpoint = "/app/a21.php"
-export const ssiClient = axios.create({
-  baseURL: "https://api.divessi.com",
-  // SSI only stores save_divelog requests sent with the MySSI app's (Dart) User-Agent;
-  // other clients get a success stub and the dive is silently dropped.
-  headers: { "User-Agent": "Dart/3.12 (dart:io)" },
-  params: {
-    ssiapp: "0815_ADR",
-    lang: "en",
-    version: "ADR_4.1.268-ssi",
-    context: "s",
-  },
-})
-
-export const ssiTokenSecureStorageKey = "ssiToken"
-export const ssiCredentialsSecureStorageKey = "ssiCredentials"
-
-export type APIErrorData = {
-  status: number
-  authenticated: false
-  authenticated_message: string
-  message: string
-  result: string
-}
-
-export class APIError extends Error {
-  constructor(public readonly error: APIErrorData) {
-    super("APIError")
-  }
-}
-
-export async function ssiGet<T>(
-  params: Record<string, string>,
-  options?: {
-    endpoint?: string
-    skipToken?: boolean
-  }
-): Promise<T> {
-  const { data } = await ssiClient.get<APIErrorData | T>(
-    options?.endpoint ?? rpcEndpoint,
-    {
-      params,
-      skipToken: options?.skipToken,
-    }
-  )
-
+export function assertSsiAuthenticated(data: JsonValue) {
   if (
-    "authenticated" in (data as object) &&
-    (data as APIErrorData).authenticated === false
+    data !== null &&
+    typeof data === "object" &&
+    !Array.isArray(data) &&
+    data.authenticated === false
   ) {
-    throw new APIError(data as APIErrorData)
+    throw new Error(
+      typeof data.authenticated_message === "string"
+        ? data.authenticated_message
+        : "SSI authentication failed"
+    )
   }
-
-  return data as unknown as T
-}
-
-export async function ssiPost<T>(
-  params: Record<string, string>,
-  body: object
-): Promise<T> {
-  const encoded = `json_data=${encodeURIComponent(JSON.stringify(body))}`
-
-  const { data } = await ssiClient.post<APIErrorData | T>(
-    rpcEndpoint,
-    encoded,
-    {
-      params,
-      skipToken: false,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-    }
-  )
-
-  return data as unknown as T
 }

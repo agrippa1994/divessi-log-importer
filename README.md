@@ -69,6 +69,9 @@ validated. Unknown keys are ignored rather than rejected.
 
 Requires [Bun](https://bun.sh/) (v1+).
 
+`divessi-client` is pinned to version 0.0.2 from the public npm registry.
+No registry credentials are needed to install dependencies.
+
 ```sh
 bun install
 ```
@@ -99,10 +102,16 @@ bun run preview     # serve the production build locally
 The production server entrypoint is `.output/server/index.mjs`, run with
 `bun run .output/server/index.mjs`.
 
+To build the Docker image locally:
+
+```sh
+docker build -t ssi-log .
+```
+
 ### Tests, linting, types
 
 ```sh
-bun test            # run the Vitest suite (converter + schema tests)
+bun run test        # run the Vitest suite (converter + SSI client tests)
 bun run check       # Biome lint + format check
 bun run format      # Biome autoformat
 bun run typecheck   # tsc --noEmit
@@ -218,8 +227,7 @@ under `src/lib/integrations/<vendor>/`. To add one:
    (`schema.ts`). Only validate the fields your converter reads; allow unknown
    keys so firmware changes don't break parsing.
 2. **Converter** — write a function that turns a parsed export into a
-   `CreateDive` (the SSI dive record defined in
-   `src/lib/integrations/ssi/create-dive.ts`). The Suunto converter is a
+   `DiveLog` from `divessi-client`. The Suunto converter is a
    complete reference for which fields matter and how depth/temperature/pressure
    datasets are serialized.
 3. **Tests** — add a sample export under `samples/` and a snapshot test, like
@@ -241,7 +249,7 @@ src/
     ui/, reui/                 shadcn/ui and Base UI components
   lib/
     integrations/
-      ssi/                     SSI API client, auth, logbook, site search, CreateDive type
+      ssi/                     SSI client integration, logbook, site search
       suunto/                  Suunto schema + converter (+ tests)
     session*.ts                Encrypted session handling
     units.ts                   Unit conversions + haversine distance
