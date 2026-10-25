@@ -127,8 +127,18 @@ The converter is covered by snapshot tests against real sample exports in
 | `SESSION_SECRET` | yes      | —         | Secret used to encrypt the session cookie. Minimum 32 characters.  |
 | `DATA_DIR`       | no       | `./data`  | Where the cached SSI site/center JSON is stored.                   |
 | `NODE_ENV`       | no       | —         | `production` enables the `secure` cookie flag (HTTPS only).        |
+| `SSI_DEBUG_HTTP` | no       | `false`   | Set to `true` or `1` to log redacted SSI HTTP traffic.            |
 
 Bun loads `.env` automatically — no `dotenv` needed.
+
+For troubleshooting, set `SSI_DEBUG_HTTP=true` in `.env` or the server's
+environment. For Helm, set `app.env.SSI_DEBUG_HTTP=true`. Logs go to server stdout
+with the `[ssi-http]` prefix and include requests, responses, headers, HTTP status,
+timing, and a request ID linking each pair. This covers login, logbook/profile
+calls, uploads, and public cache downloads. JSON and form bodies are logged;
+binary downloads are represented by their headers and a binary-body marker.
+Credentials, tokens, cookies, authorization headers, and email addresses are
+redacted in URLs, headers, and nested bodies. Logging is disabled by default.
 
 ### Data directory
 

@@ -46,6 +46,8 @@ spec:
               value: {{ $.Values.app.env.SESSION_SECRET | quote }}
             - name: DATA_DIR
               value: /data
+            - name: SSI_DEBUG_HTTP
+              value: {{ $.Values.app.env.SSI_DEBUG_HTTP | default "false" | quote }}
           ports:
             - containerPort: 3000
               name: app

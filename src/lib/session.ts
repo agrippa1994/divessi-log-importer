@@ -24,7 +24,6 @@ export const login = createServerFn({ method: "POST" })
     })
   )
   .handler(async (ctx) => {
-    console.log("Perform login for", ctx.data.email)
     const session = await useAppSession()
 
     try {
@@ -37,8 +36,10 @@ export const login = createServerFn({ method: "POST" })
         await session.update({ ssiToken: result.data.token })
         return true
       }
-    } catch (e) {
-      console.log("Error", e)
+    } catch {
+      console.error(
+        "SSI login failed; enable SSI_DEBUG_HTTP for request details"
+      )
     }
 
     return false

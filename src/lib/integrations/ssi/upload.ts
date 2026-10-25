@@ -33,7 +33,7 @@ export async function uploadSsiDive(client: DivessiClient, dive: DiveLog) {
     return { skipped: true }
   }
 
-  const { data: response } = await client.save_divelog(
+  await client.save_divelog(
     { json_data: dive },
     {
       decode: (data) => {
@@ -46,13 +46,12 @@ export async function uploadSsiDive(client: DivessiClient, dive: DiveLog) {
   // SSI can report success while dropping a dive, so read the logbook back.
   const stored = await findStoredDive(client, start)
   if (stored.length === 0) {
-    console.error("save_divelog did not store dive", response)
+    console.error("save_divelog did not store dive")
     throw new Error(`Dive #${dive.odin_user_log_nr} was not stored by SSI`)
   }
   if (stored.length > 1) {
     console.warn(
-      `save_divelog stored dive #${dive.odin_user_log_nr} ${stored.length} times`,
-      response
+      `save_divelog stored dive #${dive.odin_user_log_nr} ${stored.length} times`
     )
   }
   return { skipped: false }

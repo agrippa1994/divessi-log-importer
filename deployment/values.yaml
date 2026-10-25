@@ -6,3 +6,4 @@ app:
   storage: 1Gi
   env:
     SESSION_SECRET:
+    SSI_DEBUG_HTTP: "false"

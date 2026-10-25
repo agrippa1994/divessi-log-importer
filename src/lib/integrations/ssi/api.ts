@@ -1,8 +1,9 @@
 import { createClient, type JsonValue } from "divessi-client"
+import { ssiFetch } from "./http"
 
 // A client owns its token, so each server request gets an isolated instance.
 export function createSsiClient(token?: string) {
-  return createClient({ token, metadata: { lang: "en" } })
+  return createClient({ token, metadata: { lang: "en" }, fetch: ssiFetch })
 }
 
 export function assertSsiAuthenticated(data: JsonValue) {
