@@ -99,10 +99,16 @@ bun run preview     # serve the production build locally
 The production server entrypoint is `.output/server/index.mjs`, run with
 `bun run .output/server/index.mjs`.
 
+To build the Docker image locally:
+
+```sh
+docker build -t ssi-log .
+```
+
 ### Tests, linting, types
 
 ```sh
-bun test            # run the Vitest suite (converter + schema tests)
+bun run test        # run the Vitest suite (converter + SSI client tests)
 bun run check       # Biome lint + format check
 bun run format      # Biome autoformat
 bun run typecheck   # tsc --noEmit
@@ -118,8 +124,18 @@ The converter is covered by snapshot tests against real sample exports in
 | `SESSION_SECRET` | yes      | —         | Secret used to encrypt the session cookie. Minimum 32 characters.  |
 | `DATA_DIR`       | no       | `./data`  | Where the cached SSI site/center JSON is stored.                   |
 | `NODE_ENV`       | no       | —         | `production` enables the `secure` cookie flag (HTTPS only).        |
+| `SSI_DEBUG_HTTP` | no       | `false`   | Set to `true` or `1` to log redacted SSI HTTP traffic.            |
 
 Bun loads `.env` automatically — no `dotenv` needed.
+
+For troubleshooting, set `SSI_DEBUG_HTTP=true` in `.env` or the server's
+environment. Logs go to server stdout
+with the `[ssi-http]` prefix and include requests, responses, headers, HTTP status,
+timing, and a request ID linking each pair. This covers login, logbook/profile
+calls, uploads, and public cache downloads. JSON and form bodies are logged;
+binary downloads are represented by their headers and a binary-body marker.
+Credentials, tokens, cookies, authorization headers, and email addresses are
+redacted in URLs, headers, and nested bodies. Logging is disabled by default.
 
 ### Data directory
 
@@ -192,23 +208,6 @@ docker build -t ssi-log .
 The [`Dockerfile`](./Dockerfile) is a multi-stage Bun build: install
 dependencies, `bun run build`, then ship only `.output` on top of `oven/bun`.
 
-### Kubernetes
-
-A minimal Helm chart lives in [`deployment/`](./deployment). It deploys the
-image with a `PersistentVolumeClaim` for `DATA_DIR`, a health-checked
-`Deployment` (`/api/health`), a `Service`, and a cert-manager-annotated
-`Ingress`.
-
-```sh
-helm upgrade --install ssi-log ./deployment \
-  --set app.host=dives.example.com \
-  --set app.env.SESSION_SECRET=$(openssl rand -hex 32) \
-  --set app.version=latest
-```
-
-Adjust `deployment/values.yaml` (image, hostname, storage size, session secret)
-to your cluster.
-
 ## Adding another dive computer
 
 The importer is structured so that a new computer is a self-contained addition
@@ -218,8 +217,7 @@ under `src/lib/integrations/<vendor>/`. To add one:
    (`schema.ts`). Only validate the fields your converter reads; allow unknown
    keys so firmware changes don't break parsing.
 2. **Converter** — write a function that turns a parsed export into a
-   `CreateDive` (the SSI dive record defined in
-   `src/lib/integrations/ssi/create-dive.ts`). The Suunto converter is a
+   `DiveLog` from `divessi-client`. The Suunto converter is a
    complete reference for which fields matter and how depth/temperature/pressure
    datasets are serialized.
 3. **Tests** — add a sample export under `samples/` and a snapshot test, like
@@ -241,13 +239,12 @@ src/
     ui/, reui/                 shadcn/ui and Base UI components
   lib/
     integrations/
-      ssi/                     SSI API client, auth, logbook, site search, CreateDive type
+      ssi/                     SSI client integration, logbook, site search
       suunto/                  Suunto schema + converter (+ tests)
     session*.ts                Encrypted session handling
     units.ts                   Unit conversions + haversine distance
     env.ts                     Validated environment config
   server/plugins/ssi-data.ts   Boot-time SSI data cache download
-deployment/                    Helm chart
 samples/                       Real dive-log exports used by tests
 ```
 

@@ -1,15 +1,14 @@
+import type { DiveLog, DiveRecord } from "divessi-client"
 import {
   barToPsi,
   celsiusToFahrenheit,
   kelvinToCelsius,
   metersToFeet,
 } from "../../units"
-import {
-  type CreateDive,
-  DivePhaseFlag,
-  type DiveSample,
-} from "../ssi/create-dive"
 import type { SuuntoDiveLog } from "./schema"
+
+// SSI marks every imported sample as part of an active dive.
+const DIVE_ACTIVE_FLAG = 0x08000000
 
 // --- GPS ---
 
@@ -26,8 +25,8 @@ export function extractSuuntoGps(
 
 // --- Main Converter ---
 
-function createDiveSamples(data: SuuntoDiveLog): DiveSample[] {
-  const diveSamples: DiveSample[] = []
+function createDiveSamples(data: SuuntoDiveLog): DiveRecord[] {
+  const diveSamples: DiveRecord[] = []
 
   let index = 1
   let sampleId = -1
@@ -81,7 +80,7 @@ function createDiveSamples(data: SuuntoDiveLog): DiveSample[] {
       dr: false,
       // gn: suuntoSample.RtGradientFactors?.gf99,
       gs: suuntoSample.RtGradientFactors?.gfSurface ?? 0,
-      mf: DivePhaseFlag.DIVE,
+      mf: DIVE_ACTIVE_FLAG,
       n: index,
       ndl: Math.min((suuntoSample.NoDecTime ?? 0) / 60, 99),
       o: false,
@@ -96,7 +95,7 @@ function createDiveSamples(data: SuuntoDiveLog): DiveSample[] {
   return diveSamples
 }
 
-export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
+export function convertSuuntoToSSI(data: SuuntoDiveLog) {
   const { Header, Samples } = data.DeviceLog
 
   // Find dive start/end indices
@@ -118,8 +117,6 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
   for (const sample of Samples) {
     const sampleTime = new Date(sample.TimeISO8601).getTime()
     if (sampleTime < diveStartTime || sampleTime > diveEndTime) continue
-
-    const _secondsOffset = (sampleTime - diveStartTime) / 1000
 
     if (sample.Depth !== undefined) {
       depthData.push(sample.Depth)
@@ -561,7 +558,7 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     odin_user_log_pos_end_longitude: null,
 
     // --- Apple Watch ---
-    odin_user_log_apple_watch: 0,
+    odin_user_log_apple_watch: false,
     odin_user_log_apple_watch_log_id: null,
     odin_user_log_apple_watch_id: null,
     odin_user_log_apple_watch_app_version: null,
@@ -579,8 +576,8 @@ export function convertSuuntoToSSI(data: SuuntoDiveLog): CreateDive {
     odin_user_log_gyroDataset: null,
 
     // --- Misc ---
-    odin_user_log_dive_on_own_risk: 0,
+    odin_user_log_dive_on_own_risk: false,
     odin_user_log_dive_on_own_risk_os_app: null,
     odin_user_log_housing_local_dive_media: null,
-  } satisfies CreateDive
+  } satisfies DiveLog
 }

@@ -19,10 +19,10 @@ import {
 } from "@/lib/integrations/ssi/site-search"
 
 /** The subset of a site we persist on a dive (search results are a superset). */
-type SelectedSite = {
-  odin_dive_sites_id: number
-  odin_dive_sites_name: string
-}
+type SelectedSite = Pick<
+  SiteSearchResult,
+  "odin_dive_sites_id" | "odin_dive_sites_name"
+>
 
 /**
  * Dive-site picker for a single dive. Owns its own search query state and

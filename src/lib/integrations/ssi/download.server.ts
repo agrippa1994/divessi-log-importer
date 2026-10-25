@@ -1,6 +1,7 @@
 import { access, mkdir, writeFile } from "node:fs/promises"
 import { join } from "node:path"
 import { unzipSync } from "fflate"
+import { ssiFetch } from "./http"
 import type { SsiDataSource } from "./sources"
 
 async function exists(path: string): Promise<boolean> {
@@ -26,7 +27,7 @@ export async function ensureSsiDataSource(
 
   await mkdir(dataDir, { recursive: true })
 
-  const res = await fetch(source.url)
+  const res = await ssiFetch(source.url)
   if (!res.ok)
     throw new Error(`Failed to download ${source.url}: ${res.status}`)
 
