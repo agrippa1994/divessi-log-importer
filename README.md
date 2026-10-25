@@ -69,9 +69,6 @@ validated. Unknown keys are ignored rather than rejected.
 
 Requires [Bun](https://bun.sh/) (v1+).
 
-`divessi-client` is pinned to version 0.0.2 from the public npm registry.
-No registry credentials are needed to install dependencies.
-
 ```sh
 bun install
 ```
@@ -132,7 +129,7 @@ The converter is covered by snapshot tests against real sample exports in
 Bun loads `.env` automatically — no `dotenv` needed.
 
 For troubleshooting, set `SSI_DEBUG_HTTP=true` in `.env` or the server's
-environment. For Helm, set `app.env.SSI_DEBUG_HTTP=true`. Logs go to server stdout
+environment. Logs go to server stdout
 with the `[ssi-http]` prefix and include requests, responses, headers, HTTP status,
 timing, and a request ID linking each pair. This covers login, logbook/profile
 calls, uploads, and public cache downloads. JSON and form bodies are logged;
@@ -211,23 +208,6 @@ docker build -t ssi-log .
 The [`Dockerfile`](./Dockerfile) is a multi-stage Bun build: install
 dependencies, `bun run build`, then ship only `.output` on top of `oven/bun`.
 
-### Kubernetes
-
-A minimal Helm chart lives in [`deployment/`](./deployment). It deploys the
-image with a `PersistentVolumeClaim` for `DATA_DIR`, a health-checked
-`Deployment` (`/api/health`), a `Service`, and a cert-manager-annotated
-`Ingress`.
-
-```sh
-helm upgrade --install ssi-log ./deployment \
-  --set app.host=dives.example.com \
-  --set app.env.SESSION_SECRET=$(openssl rand -hex 32) \
-  --set app.version=latest
-```
-
-Adjust `deployment/values.yaml` (image, hostname, storage size, session secret)
-to your cluster.
-
 ## Adding another dive computer
 
 The importer is structured so that a new computer is a self-contained addition
@@ -265,7 +245,6 @@ src/
     units.ts                   Unit conversions + haversine distance
     env.ts                     Validated environment config
   server/plugins/ssi-data.ts   Boot-time SSI data cache download
-deployment/                    Helm chart
 samples/                       Real dive-log exports used by tests
 ```
 
